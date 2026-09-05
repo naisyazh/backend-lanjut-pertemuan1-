@@ -7,10 +7,8 @@ CREATE TABLE IF NOT EXISTS students (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Keunikan NIM (case-insensitive untuk jaga-jaga)
 CREATE UNIQUE INDEX IF NOT EXISTS students_nim_lower_key
     ON students (LOWER(nim));
 
--- Index untuk pencarian nama
 CREATE INDEX IF NOT EXISTS students_name_lower_idx
     ON students (LOWER(name));
