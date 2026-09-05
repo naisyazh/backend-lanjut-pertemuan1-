@@ -1,7 +1,9 @@
 .env
+logs/
 
-# Binaries
+# Binaries (compiled executables)
 *.exe
+latihan-fiber.exe
 *.exe~
 *.dll
 *.so
