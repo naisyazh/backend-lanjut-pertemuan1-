@@ -76,7 +76,6 @@ func GetStudentByID(c *fiber.Ctx) error {
 }
 
 func CreateStudent(c *fiber.Ctx) error {
-	// Cek Content-Type
 	if c.Get("Content-Type") != "application/json" {
 		return ErrorResponse(c, 415, "Content-Type harus application/json")
 	}
@@ -194,5 +193,5 @@ func DeleteStudent(c *fiber.Ctx) error {
 
 	students = append(students[:index], students[index+1:]...)
 
-	return c.SendStatus(204) // 204 No Content
+	return c.SendStatus(204) 
 }

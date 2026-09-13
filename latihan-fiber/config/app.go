@@ -16,7 +16,8 @@ import (
 // lalu mendaftarkan route. File ini adalah tempat seluruh bagian bertemu.
 func NewApp(
 	logger *slog.Logger, pool *pgxpool.Pool,
-	userService *service.UserService, studentService *service.StudentService,
+	userService *service.UserService, studentService *service.StudentService, nilaiService *service.NilaiService,
+	authService *service.AuthService, jwtManager *helper.JWTManager,
 ) *fiber.App {
 	app := fiber.New(fiber.Config{
 		AppName:      GetEnv("APP_NAME", "Praktikum Backend Lanjut"),
@@ -24,7 +25,7 @@ func NewApp(
 	})
 
 	middleware.Register(app, logger)
-	route.Register(app, pool, userService, studentService)
+	route.Register(app, pool, userService, studentService, nilaiService, authService, jwtManager)
 
 	// Penampung terakhir untuk URL yang tidak dikenal.
 	app.Use(func(c *fiber.Ctx) error {

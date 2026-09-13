@@ -84,13 +84,3 @@ func CountTotalPages(total, limit int) int {
 	}
 	return (total + limit - 1) / limit
 }
-
-// isValidEmail adalah pemeriksaan sederhana, bukan validasi RFC.
-// Pemeriksaan yang sungguh-sungguh dibahas pada pertemuan 7.
-func isValidEmail(email string) bool {
-	email = strings.TrimSpace(email)
-	at := strings.Index(email, "@")
-	dot := strings.LastIndex(email, ".")
-
-	return at > 0 && dot > at+1 && dot < len(email)-1
-}

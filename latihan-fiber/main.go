@@ -12,6 +12,7 @@ import (
 	"latihan-fiber/app/service"
 	"latihan-fiber/config"
 	"latihan-fiber/database"
+	"latihan-fiber/helper"
 )
 
 // main hanya berisi urutan perakitan. Tidak ada logika bisnis,
@@ -36,8 +37,25 @@ func main() {
 	studentRepository := repository.NewStudentRepository(pool)
 	studentService := service.NewStudentService(studentRepository)
 
-	// 4. Aplikasi
-	app := config.NewApp(logger, pool, userService, studentService)
+	nilaiRepository := repository.NewNilaiRepository(pool)
+	nilaiService := service.NewNilaiService(nilaiRepository)
+
+	// 4. Auth service dan JWT manager
+	jwtManager := helper.NewJWTManager(
+		config.GetEnv("JWT_SECRET", ""),
+		config.GetEnv("JWT_ISSUER", "praktikum-backend"),
+		15*time.Minute, // access token TTL
+	)
+	tokenRepository := repository.NewTokenRepository(pool)
+	authService := service.NewAuthService(
+		userRepository,
+		tokenRepository,
+		jwtManager,
+		7*24*time.Hour, // refresh token TTL (7 days)
+	)
+
+	// 5. Aplikasi
+	app := config.NewApp(logger, pool, userService, studentService, nilaiService, authService, jwtManager)
 
 	port := config.GetEnv("APP_PORT", "3000")
 
@@ -50,7 +68,7 @@ func main() {
 
 	logger.Info("server berjalan", slog.String("port", port))
 
-	// 5. Graceful shutdown: tunggu Ctrl+C, lalu beri waktu request
+	// 6. Graceful shutdown: tunggu Ctrl+C, lalu beri waktu request
 	// yang sedang berjalan untuk selesai.
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
