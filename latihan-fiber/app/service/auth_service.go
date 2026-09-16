@@ -51,21 +51,15 @@ func (s *AuthService) Register(c *fiber.Ctx) error {
 	if errs := ValidateRegister(req); len(errs) > 0 {
 		return helper.FailValidation(c, errs)
 	}
-
-	// Password DI-HASH sebelum menyentuh database. Nilai aslinya tidak
-	// pernah disimpan, tidak pernah di-log, dan tidak pernah dikirim balik.
 	hashed, err := helper.HashPassword(req.Password)
 	if err != nil {
 		return helper.Fail(c, fiber.StatusInternalServerError, "gagal memproses password")
 	}
-
-	// Role selalu ditentukan server, tidak pernah diambil dari request.
-	// Ini mencegah mass assignment vulnerability
 	created, err := s.users.Create(ctx, model.User{
 		Username: req.Username,
 		Email:    req.Email,
 		Password: hashed,
-		Role:     "user", // Always "user" for registration - admin created manually
+		Role:     "user", 
 		IsActive: true,
 	})
 	if err != nil {
@@ -94,10 +88,6 @@ func (s *AuthService) Login(c *fiber.Ctx) error {
 
 	user, err := s.users.FindByUsername(ctx, strings.TrimSpace(req.Username))
 	if err != nil {
-		// Username tidak ditemukan. Tetap jalankan pemeriksaan palsu agar
-		// waktu tanggapnya mirip dengan kasus password salah, lalu jawab
-		// dengan pesan yang SAMA PERSIS. Membedakan keduanya sama saja
-		// dengan memberi tahu penyerang username mana yang terdaftar.
 		helper.VerifyDummyPassword(req.Password)
 		return helper.Fail(c, fiber.StatusUnauthorized, "username atau password salah")
 	}
@@ -142,9 +132,6 @@ func (s *AuthService) Refresh(c *fiber.Ctx) error {
 	if err != nil || !user.IsActive {
 		return helper.Fail(c, fiber.StatusUnauthorized, "akun tidak dapat dipakai")
 	}
-
-	// ROTASI: token lama langsung dicabut dan diganti yang baru.
-	// Bila token lama sempat dicuri, ia hanya berguna sekali.
 	if err := s.tokens.Revoke(ctx, hash); err != nil {
 		return helper.Fail(c, fiber.StatusInternalServerError, "gagal memperbarui token")
 	}
@@ -167,8 +154,6 @@ func (s *AuthService) Logout(c *fiber.Ctx) error {
 	}
 
 	if strings.TrimSpace(req.RefreshToken) != "" {
-		// Kegagalan mencabut tidak dilaporkan sebagai error ke client:
-		// dari sudut pandang pemakai, logout harus selalu berhasil.
 		_ = s.tokens.Revoke(ctx, helper.SHA256Hex(req.RefreshToken))
 	}
 
@@ -192,7 +177,6 @@ func (s *AuthService) Me(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "profil berhasil diambil", user)
 }
 
-// issueTokenPair membuat access token dan refresh token sekaligus.
 func (s *AuthService) issueTokenPair(
 	ctx context.Context, user model.User,
 ) (model.TokenPair, error) {
@@ -205,8 +189,6 @@ func (s *AuthService) issueTokenPair(
 	if err != nil {
 		return model.TokenPair{}, err
 	}
-
-	// Yang disimpan hash-nya, bukan tokennya.
 	err = s.tokens.Save(ctx, model.RefreshToken{
 		UserID:    user.ID,
 		TokenHash: helper.SHA256Hex(refreshToken),

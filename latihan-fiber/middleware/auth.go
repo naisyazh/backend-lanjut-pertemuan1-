@@ -8,12 +8,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 
+	"latihan-fiber/app/model"
 	"latihan-fiber/helper"
 )
 
-// RequireAuth memeriksa access token pada header Authorization.
-// Bila tokennya sah, identitas pemakai disimpan di Locals agar dapat
-// dibaca service tanpa memeriksa ulang.
 func RequireAuth(jwtManager *helper.JWTManager) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		token, err := bearerToken(c)
@@ -27,15 +25,38 @@ func RequireAuth(jwtManager *helper.JWTManager) fiber.Handler {
 		authUser, err := jwtManager.Parse(token)
 		if err != nil {
 			c.Set("WWW-Authenticate", `Bearer realm="api"`)
-			// Membedakan "kedaluwarsa" dari "tidak valid" aman dilakukan:
-			// client memang perlu tahu kapan harus memanggil /auth/refresh.
 			if errors.Is(err, helper.ErrExpiredToken) {
 				return helper.Fail(c, fiber.StatusUnauthorized, "access token kedaluwarsa")
 			}
 			return helper.Fail(c, fiber.StatusUnauthorized, "access token tidak valid")
 		}
 
-		c.Locals(helper.LocalsAuthUser, authUser)
+		c.Locals(helper.LocalsAuthUser, &authUser)
+		return c.Next()
+	}
+}
+
+func RequirePermission(authzChecker *helper.AuthzChecker, permission string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		authUser, ok := c.Locals(helper.LocalsAuthUser).(*model.AuthUser)
+		if !ok {
+			return helper.Fail(c, fiber.StatusUnauthorized, "user tidak terautentikasi")
+		}
+
+		ctx, cancel := helper.RequestContext(c)
+		defer cancel()
+
+		// Cek permission
+		hasPermission, err := authzChecker.HasPermission(ctx, authUser.Role, permission)
+		if err != nil {
+			return helper.Fail(c, fiber.StatusInternalServerError, "gagal memeriksa permission")
+		}
+
+		if !hasPermission && authUser.Role != "user" {
+			return helper.Fail(c, fiber.StatusForbidden, "tidak memiliki permission: "+permission)
+		}
+
+		// Untuk user biasa, akan dicek lagi di service layer untuk ownership
 		return c.Next()
 	}
 }
@@ -59,9 +80,6 @@ func bearerToken(c *fiber.Ctx) (string, error) {
 	return token, nil
 }
 
-// LoginRateLimiter membatasi jumlah percobaan login dari satu alamat IP.
-// Tanpa pembatasan ini, penyerang dapat mencoba ribuan password per menit
-// (serangan brute force) tanpa hambatan apa pun.
 func LoginRateLimiter() fiber.Handler {
 	return limiter.New(limiter.Config{
 		Max:        5,

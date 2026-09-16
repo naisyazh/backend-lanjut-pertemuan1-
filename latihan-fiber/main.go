@@ -34,8 +34,11 @@ func main() {
 	userRepository := repository.NewUserRepository(pool)
 	userService := service.NewUserService(userRepository)
 
+	// AuthzChecker untuk authorization
+	authzChecker := helper.NewAuthzChecker(pool)
+	
 	studentRepository := repository.NewStudentRepository(pool)
-	studentService := service.NewStudentService(studentRepository)
+	studentService := service.NewStudentService(studentRepository, authzChecker)
 
 	nilaiRepository := repository.NewNilaiRepository(pool)
 	nilaiService := service.NewNilaiService(nilaiRepository)

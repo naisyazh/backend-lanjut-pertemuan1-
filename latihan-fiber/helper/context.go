@@ -10,7 +10,7 @@ import (
 // antara tempat menyimpan dan tempat membaca.
 const LocalsAuthUser = "authUser"
 
-func CurrentUser(c *fiber.Ctx) (model.AuthUser, bool) {
-	user, ok := c.Locals(LocalsAuthUser).(model.AuthUser)
+func CurrentUser(c *fiber.Ctx) (*model.AuthUser, bool) {
+	user, ok := c.Locals(LocalsAuthUser).(*model.AuthUser)
 	return user, ok
 }

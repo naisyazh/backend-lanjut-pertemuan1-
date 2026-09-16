@@ -15,9 +15,6 @@ var (
 	ErrExpiredToken = errors.New("token sudah kedaluwarsa")
 )
 
-// accessClaims adalah isi access token. Selain field bawaan JWT,
-// ditambahkan username dan role agar middleware tidak perlu
-// menanyakannya ke database pada setiap request.
 type accessClaims struct {
 	Username string `json:"username"`
 	Role     string `json:"role"`
@@ -36,7 +33,6 @@ func NewJWTManager(secret, issuer string, accessTTL time.Duration) *JWTManager {
 
 func (m *JWTManager) AccessTTL() time.Duration { return m.accessTTL }
 
-// GenerateAccess membuat access token berumur pendek.
 func (m *JWTManager) GenerateAccess(u model.User) (string, error) {
 	now := time.Now()
 	claims := accessClaims{
@@ -53,15 +49,10 @@ func (m *JWTManager) GenerateAccess(u model.User) (string, error) {
 	return token.SignedString(m.secret)
 }
 
-// Parse memeriksa tanda tangan dan masa berlaku token,
-// lalu mengembalikan identitas yang dibawanya.
 func (m *JWTManager) Parse(tokenString string) (model.AuthUser, error) {
 	claims := &accessClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims,
 		func(t *jwt.Token) (any, error) {
-			// PEMERIKSAAN WAJIB: pastikan algoritmanya memang yang kita pilih.
-			// Tanpa baris ini, penyerang dapat mengirim token ber-alg "none"
-			// atau menukar algoritma, dan tanda tangannya akan lolos.
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("algoritma tidak diharapkan: %v", t.Header["alg"])
 			}

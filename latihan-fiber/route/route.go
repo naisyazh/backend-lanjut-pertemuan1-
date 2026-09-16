@@ -12,19 +12,16 @@ import (
 	"latihan-fiber/middleware"
 )
 
-// Register memetakan URL ke method pada service.
-//
-// Perhatikan isi file ini: tidak ada logika bisnis, tidak ada query,
-// tidak ada validasi. Hanya daftar alamat dan siapa yang melayaninya.
 func Register(app *fiber.App, pool *pgxpool.Pool,
 	userService *service.UserService, studentService *service.StudentService, nilaiService *service.NilaiService,
 	authService *service.AuthService, jwtManager *helper.JWTManager) {
 
+	// Buat authz checker
+	authzChecker := helper.NewAuthzChecker(pool)
+
 	api := app.Group("/api/v1")
 
 	api.Get("/health", healthCheck(pool))
-
-	// Authentication endpoints - public (tidak butuh auth)
 	auth := api.Group("/auth", middleware.RequireJSON)
 	auth.Post("/register", authService.Register)
 	auth.Post("/login", middleware.LoginRateLimiter(), authService.Login)
@@ -40,25 +37,23 @@ func Register(app *fiber.App, pool *pgxpool.Pool,
 	users.Patch("/:id", userService.Patch)
 	users.Delete("/:id", userService.Delete)
 
-	// Students endpoints - PROTECTED (butuh authentication)
+	// Students dengan RBAC authorization
 	students := api.Group("/students", middleware.RequireJSON, middleware.RequireAuth(jwtManager))
-	students.Get("/", studentService.List)
-	students.Get("/:id", studentService.Get)
-	students.Post("/", studentService.Create)
-	students.Put("/:id", studentService.Replace)
-	students.Patch("/:id", studentService.Patch)
-	students.Delete("/:id", studentService.Delete)
+	students.Get("/", middleware.RequirePermission(authzChecker, "student:list"), studentService.List)
+	students.Get("/:id", studentService.Get) // Authorization dicek di service layer untuk ownership
+	students.Post("/", middleware.RequirePermission(authzChecker, "student:create"), studentService.Create)
+	students.Put("/:id", studentService.Replace) // Authorization dicek di service layer untuk ownership
+	students.Patch("/:id", studentService.Patch) // Authorization dicek di service layer untuk ownership
+	students.Delete("/:id", middleware.RequirePermission(authzChecker, "student:delete"), studentService.Delete)
 
-	// Nilai endpoints - PROTECTED (butuh authentication)
 	nilai := api.Group("/nilai", middleware.RequireJSON, middleware.RequireAuth(jwtManager))
-	nilai.Get("/", nilaiService.GetAllNilai_Handler)                    // GET /api/v1/nilai
-	nilai.Post("/", nilaiService.CreateNilai_Handler)                  // POST /api/v1/nilai
-	nilai.Get("/nim/:nim", nilaiService.GetNilaiByNIM_Handler)         // GET /api/v1/nilai/nim/123456
-	nilai.Get("/statistik/:nim", nilaiService.GetStatistikNilai_Handler) // GET /api/v1/nilai/statistik/123456
-	nilai.Get("/matkul", nilaiService.GetNilaiByMatkul_Handler)        // GET /api/v1/nilai/matkul?nama=praktikum
+	nilai.Get("/", nilaiService.GetAllNilai_Handler)                    
+	nilai.Post("/", nilaiService.CreateNilai_Handler)                  
+	nilai.Get("/nim/:nim", nilaiService.GetNilaiByNIM_Handler)         
+	nilai.Get("/statistik/:nim", nilaiService.GetStatistikNilai_Handler) 
+	nilai.Get("/matkul", nilaiService.GetNilaiByMatkul_Handler)       
 }
 
-// healthCheck melaporkan kondisi layanan beserta databasenya.
 func healthCheck(pool *pgxpool.Pool) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.UserContext(), 2*time.Second)

@@ -9,8 +9,6 @@ import (
 
 const minPasswordLength = 8
 
-// ValidateRegister adalah business rules untuk pendaftaran user baru.
-// Function ini murni (tidak menyentuh fiber.Ctx) sehingga dapat di-unit test.
 func ValidateRegister(req model.RegisterRequest) map[string]string {
 	errs := map[string]string{}
 
@@ -35,9 +33,6 @@ func ValidateRegister(req model.RegisterRequest) map[string]string {
 	return errs
 }
 
-// ValidateLogin hanya memeriksa kelengkapan, BUKAN kekuatan password.
-// Aturan kekuatan tidak diberlakukan di sini karena password lama
-// mungkin dibuat sebelum aturannya berubah.
 func ValidateLogin(req model.LoginRequest) map[string]string {
 	errs := map[string]string{}
 
@@ -52,8 +47,6 @@ func ValidateLogin(req model.LoginRequest) map[string]string {
 	return errs
 }
 
-// checkPasswordStrength memeriksa kekuatan password sesuai requirement keamanan.
-// Function ini dapat digunakan untuk unit testing.
 func checkPasswordStrength(password string) string {
 	if len(password) < minPasswordLength {
 		return "minimal 8 karakter"
@@ -72,9 +65,6 @@ func checkPasswordStrength(password string) string {
 	if !hasLetter || !hasDigit {
 		return "harus memuat huruf dan angka"
 	}
-
-	// Daftar password lemah - dalam sistem nyata menggunakan database
-	// berisi jutaan password yang pernah bocor
 	weak := map[string]bool{
 		"password1": true, "12345678": true, "qwerty123": true,
 		"admin123": true, "password123": true, "abcd1234": true,
@@ -97,6 +87,5 @@ func isValidUsername(username string) bool {
 }
 
 func isValidEmail(email string) bool {
-	// Implementasi sederhana - dalam produksi gunakan regex yang lebih ketat
 	return strings.Contains(email, "@") && strings.Contains(email, ".")
 }
