@@ -29,7 +29,7 @@ func Register(app *fiber.App, pool *pgxpool.Pool,
 	auth.Post("/logout", authService.Logout)
 	auth.Get("/me", middleware.RequireAuth(jwtManager), authService.Me)
 
-	users := api.Group("/users", middleware.RequireJSON)
+	users := api.Group("/users", middleware.RequireJSON, middleware.RequireAuth(jwtManager))
 	users.Get("/", userService.List)
 	users.Get("/:id", userService.Get)
 	users.Post("/", userService.Create)
@@ -60,8 +60,7 @@ func healthCheck(pool *pgxpool.Pool) fiber.Handler {
 		defer cancel()
 
 		if err := pool.Ping(ctx); err != nil {
-			return helper.Fail(c, fiber.StatusServiceUnavailable,
-				"database tidak dapat dihubungi")
+			return helper.Internal(err)
 		}
 
 		return helper.Success(c, fiber.StatusOK, "server dan database berjalan", nil)

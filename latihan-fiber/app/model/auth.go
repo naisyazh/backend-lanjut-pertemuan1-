@@ -4,9 +4,9 @@ import "time"
 
 // RegisterRequest adalah request body untuk POST /auth/register
 type RegisterRequest struct {
-	Username string `json:"username" validate:"required,min=3"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8"`
+	Username string `json:"username" validate:"required,min=3,max=30,username"`
+	Email    string `json:"email"    validate:"required,email,max=120"`
+	Password string `json:"password" validate:"required,max=72,strongpassword"`
 	// TIDAK ADA field Role - role ditentukan server untuk keamanan
 }
 

@@ -18,17 +18,16 @@ func RequireAuth(jwtManager *helper.JWTManager) fiber.Handler {
 		if err != nil {
 			// WWW-Authenticate adalah header baku yang menyertai 401.
 			c.Set("WWW-Authenticate", `Bearer realm="api"`)
-			return helper.Fail(c, fiber.StatusUnauthorized,
-				"header Authorization tidak ada atau salah bentuk")
+			return helper.Unauthorized("header Authorization tidak ada atau salah bentuk")
 		}
 
 		authUser, err := jwtManager.Parse(token)
 		if err != nil {
 			c.Set("WWW-Authenticate", `Bearer realm="api"`)
 			if errors.Is(err, helper.ErrExpiredToken) {
-				return helper.Fail(c, fiber.StatusUnauthorized, "access token kedaluwarsa")
+				return helper.Unauthorized("access token kedaluwarsa")
 			}
-			return helper.Fail(c, fiber.StatusUnauthorized, "access token tidak valid")
+			return helper.Unauthorized("access token tidak valid")
 		}
 
 		c.Locals(helper.LocalsAuthUser, &authUser)
@@ -40,23 +39,21 @@ func RequirePermission(authzChecker *helper.AuthzChecker, permission string) fib
 	return func(c *fiber.Ctx) error {
 		authUser, ok := c.Locals(helper.LocalsAuthUser).(*model.AuthUser)
 		if !ok {
-			return helper.Fail(c, fiber.StatusUnauthorized, "user tidak terautentikasi")
+			return helper.Unauthorized("user tidak terautentikasi")
 		}
 
 		ctx, cancel := helper.RequestContext(c)
 		defer cancel()
 
-		// Cek permission
 		hasPermission, err := authzChecker.HasPermission(ctx, authUser.Role, permission)
 		if err != nil {
-			return helper.Fail(c, fiber.StatusInternalServerError, "gagal memeriksa permission")
+			return helper.Internal(err)
 		}
 
 		if !hasPermission && authUser.Role != "user" {
-			return helper.Fail(c, fiber.StatusForbidden, "tidak memiliki permission: "+permission)
+			return helper.Forbidden("tidak memiliki permission: " + permission)
 		}
 
-		// Untuk user biasa, akan dicek lagi di service layer untuk ownership
 		return c.Next()
 	}
 }
@@ -89,8 +86,7 @@ func LoginRateLimiter() fiber.Handler {
 		},
 		LimitReached: func(c *fiber.Ctx) error {
 			c.Set("Retry-After", "60")
-			return helper.Fail(c, fiber.StatusTooManyRequests,
-				"terlalu banyak percobaan login, coba lagi dalam satu menit")
+			return helper.TooManyRequests("terlalu banyak percobaan login, coba lagi dalam satu menit")
 		},
 	})
 }

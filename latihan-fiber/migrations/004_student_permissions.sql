@@ -25,7 +25,6 @@ INSERT INTO permissions (name, description) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO role_permissions (role_name, permission_name) VALUES
- -- admin: semua permission
  ('admin', 'student:list'),
  ('admin', 'student:read:any'),
  ('admin', 'student:create'),

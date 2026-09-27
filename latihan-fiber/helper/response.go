@@ -5,6 +5,15 @@ import (
 	"latihan-fiber/app/model"
 )
 
+func SuccessCursor(c *fiber.Ctx, message string, data any, meta *model.CursorMeta) error {
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":  "success",
+		"message": message,
+		"data":    data,
+		"meta":    meta,
+	})
+}
+
 func Success(c *fiber.Ctx, status int, message string, data any) error {
 	return c.Status(status).JSON(model.WebResponse{
 		Status:  "success",

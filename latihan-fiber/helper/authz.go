@@ -16,8 +16,6 @@ type AuthzChecker struct {
 func NewAuthzChecker(pool *pgxpool.Pool) *AuthzChecker {
 	return &AuthzChecker{pool: pool}
 }
-
-// HasPermission mengecek apakah user dengan role tertentu memiliki permission
 func (a *AuthzChecker) HasPermission(ctx context.Context, role, permission string) (bool, error) {
 	var count int
 	query := `
@@ -35,7 +33,6 @@ func (a *AuthzChecker) HasPermission(ctx context.Context, role, permission strin
 	return count > 0, nil
 }
 
-// CanAccessStudent mengecek apakah user bisa mengakses student tertentu
 func (a *AuthzChecker) CanAccessStudent(ctx context.Context, userID int, userRole string, studentID int, permission string) (bool, error) {
 	// Admin dan staff dengan permission bisa akses semua
 	if userRole == "admin" || (userRole == "staff" && strings.Contains(permission, "read")) {
