@@ -167,7 +167,7 @@ func (s *AuthService) Me(c *fiber.Ctx) error {
 		return helper.Unauthorized("belum terautentikasi")
 	}
 
-	user, err := s.users.FindByID(ctx, authUser.ID)
+	user, err := s.users.FindByID(ctx, authUser.UserID)
 	if err != nil {
 		return helper.Unauthorized("user tidak ditemukan")
 	}

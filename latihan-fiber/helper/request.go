@@ -80,12 +80,12 @@ func ParseListQuery(c *fiber.Ctx) model.ListQuery {
 const LocalsAuthUser = "auth_user"
 
 // CurrentUser mengambil user yang sedang login dari context.
-func CurrentUser(c *fiber.Ctx) (*model.User, bool) {
+func CurrentUser(c *fiber.Ctx) (*model.AuthUser, bool) {
 	user := c.Locals(LocalsAuthUser)
 	if user == nil {
 		return nil, false
 	}
-	if u, ok := user.(*model.User); ok {
+	if u, ok := user.(*model.AuthUser); ok {
 		return u, true
 	}
 	return nil, false

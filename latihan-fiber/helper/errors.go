@@ -92,6 +92,14 @@ func TooManyRequests(message string) *AppError {
 	}
 }
 
+// NewError dipakai bila sebuah kegagalan butuh kode yang lebih spesifik
+// daripada kode umum di atas — misalnya COURSE_FULL alih-alih CONFLICT.
+// Client dapat menampilkan pesan berbeda untuk "kelas penuh" dan "sudah
+// terdaftar", padahal keduanya sama-sama 409.
+func NewError(status int, code, message string) *AppError {
+	return &AppError{Status: status, Code: code, Message: message}
+}
+
 // Internal sengaja memakai pesan yang seragam dan tidak informatif.
 // Detail teknisnya disimpan pada cause dan hanya muncul di log, karena
 // pesan error database sering membocorkan nama tabel dan struktur query.
@@ -100,4 +108,33 @@ func Internal(cause error) *AppError {
 		Status: fiber.StatusInternalServerError, Code: CodeInternal,
 		Message: "terjadi kesalahan pada server", cause: cause,
 	}
+}
+
+func ServiceUnavailable(message string) *AppError {
+	return &AppError{Status: fiber.StatusServiceUnavailable, Code: "SERVICE_UNAVAILABLE", Message: message}
+}
+
+// PermissionSet adalah daftar permission yang sudah dimuat saat aplikasi menyala.
+// Dipakai untuk memeriksa hak akses tanpa query ke database setiap kali request.
+type PermissionSet struct {
+	perms map[string]map[string]bool // role -> permission -> true
+}
+
+func NewPermissionSet(rolePerms map[string][]string) *PermissionSet {
+	p := &PermissionSet{perms: make(map[string]map[string]bool)}
+	for role, perms := range rolePerms {
+		p.perms[role] = make(map[string]bool)
+		for _, perm := range perms {
+			p.perms[role][perm] = true
+		}
+	}
+	return p
+}
+
+// Can memeriksa apakah role memiliki permission tertentu.
+func (ps *PermissionSet) Can(role, permission string) bool {
+	if ps == nil {
+		return false
+	}
+	return ps.perms[role][permission]
 }
