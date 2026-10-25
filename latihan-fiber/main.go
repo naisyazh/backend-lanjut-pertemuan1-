@@ -94,6 +94,14 @@ func main() {
 
 	reviewService := service.NewReviewService(reviewRepository, courseRepository, permSet)
 
+	// 9. Portfolio service (Tugas Mandiri C)
+	portfolioRepository := repository.NewPortfolioRepository(mongoDB)
+	if err := portfolioRepository.EnsureIndexes(context.Background()); err != nil {
+		logger.Error("gagal membuat index portfolio MongoDB", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	portfolioService := service.NewPortfolioService(portfolioRepository, studentRepository)
+
 	// 9. Aplikasi
 	app := config.NewApp(logger, route.Dependencies{
 		Pool:              pool,
@@ -107,6 +115,7 @@ func main() {
 		CourseService:     courseService,
 		SupervisorService: supervisorService,
 		ReviewService:     reviewService,
+		PortfolioService:  portfolioService,
 	})
 
 	port := config.GetEnv("APP_PORT", "3002")

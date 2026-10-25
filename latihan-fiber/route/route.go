@@ -26,6 +26,7 @@ type Dependencies struct {
 	CourseService     *service.CourseService
 	SupervisorService *service.SupervisorService
 	ReviewService     *service.ReviewService
+	PortfolioService  *service.PortfolioService
 }
 
 func Register(app *fiber.App, deps Dependencies) {
@@ -118,6 +119,20 @@ func Register(app *fiber.App, deps Dependencies) {
 	reviews.Delete("/:id", deps.ReviewService.Delete)
 	reviews.Post("/:id/replies", deps.ReviewService.Reply)
 	reviews.Post("/:id/helpful", deps.ReviewService.MarkHelpful)
+
+	// --- portofolio mahasiswa (MongoDB) ---
+	students2 := api.Group("/students",
+		middleware.RequireJSON,
+		middleware.RequireAuth(deps.JWT))
+	students2.Get("/:id/portfolio", deps.PortfolioService.Get)
+	students2.Put("/:id/portfolio", deps.PortfolioService.Upsert)
+	students2.Post("/:id/portfolio/projects", deps.PortfolioService.AddProject)
+	students2.Delete("/:id/portfolio/projects/:projectId", deps.PortfolioService.DeleteProject)
+
+	portfolios := api.Group("/portfolios",
+		middleware.RequireJSON,
+		middleware.RequireAuth(deps.JWT))
+	portfolios.Get("/stats/technologies", deps.PortfolioService.TopTechnologies)
 }
 
 func healthCheck(pool *pgxpool.Pool, mongoClient *mongo.Client) fiber.Handler {
