@@ -15,18 +15,19 @@ import (
 
 // Dependencies mengumpulkan seluruh ketergantungan yang dibutuhkan route.
 type Dependencies struct {
-	Pool              *pgxpool.Pool
-	Mongo             *mongo.Client
-	JWT               *helper.JWTManager
-	Permissions       *helper.AuthzChecker
-	UserService       *service.UserService
-	StudentService    *service.StudentService
-	NilaiService      *service.NilaiService
-	AuthService       *service.AuthService
-	CourseService     *service.CourseService
-	SupervisorService *service.SupervisorService
-	ReviewService     *service.ReviewService
-	PortfolioService  *service.PortfolioService
+	Pool                *pgxpool.Pool
+	Mongo               *mongo.Client
+	JWT                 *helper.JWTManager
+	Permissions         *helper.AuthzChecker
+	UserService         *service.UserService
+	StudentService      *service.StudentService
+	NilaiService        *service.NilaiService
+	AuthService         *service.AuthService
+	CourseService       *service.CourseService
+	SupervisorService   *service.SupervisorService
+	ReviewService       *service.ReviewService
+	PortfolioService    *service.PortfolioService
+	NotificationService *service.NotificationService
 }
 
 func Register(app *fiber.App, deps Dependencies) {
@@ -133,6 +134,19 @@ func Register(app *fiber.App, deps Dependencies) {
 		middleware.RequireJSON,
 		middleware.RequireAuth(deps.JWT))
 	portfolios.Get("/stats/technologies", deps.PortfolioService.TopTechnologies)
+
+	// --- notifikasi (diisi oleh worker, dibaca lewat API) ---
+	notifications := api.Group("/notifications",
+		middleware.RequireJSON,
+		middleware.RequireAuth(deps.JWT))
+	notifications.Get("/mine", deps.NotificationService.Mine)
+
+	admin := api.Group("/admin",
+		middleware.RequireJSON,
+		middleware.RequireAuth(deps.JWT))
+	admin.Get("/queue",
+		middleware.RequirePermission(perms, "queue:monitor"),
+		deps.NotificationService.Monitor)
 }
 
 func healthCheck(pool *pgxpool.Pool, mongoClient *mongo.Client) fiber.Handler {

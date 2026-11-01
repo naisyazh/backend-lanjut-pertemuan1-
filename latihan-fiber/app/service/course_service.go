@@ -16,11 +16,16 @@ var errCreditLimit = errors.New("batas SKS terlampaui")
 
 type CourseService struct {
 	courses repository.CourseRepository
+	outbox  repository.OutboxRepository
 	tx      *repository.TxManager
 }
 
-func NewCourseService(courses repository.CourseRepository, tx *repository.TxManager) *CourseService {
-	return &CourseService{courses: courses, tx: tx}
+func NewCourseService(
+	courses repository.CourseRepository,
+	outbox repository.OutboxRepository,
+	tx *repository.TxManager,
+) *CourseService {
+	return &CourseService{courses: courses, outbox: outbox, tx: tx}
 }
 
 // ---------- GET /courses ----------
@@ -57,9 +62,9 @@ func (s *CourseService) Mine(c *fiber.Ctx) error {
 		total += course.Credits
 	}
 	return helper.Success(c, fiber.StatusOK, "KRS berhasil diambil", fiber.Map{
-		"courses":      courses,
+		"courses":       courses,
 		"total_credits": total,
-		"max_credits":  MaxCreditsPerSemester,
+		"max_credits":   MaxCreditsPerSemester,
 	})
 }
 
@@ -132,8 +137,21 @@ func (s *CourseService) Enroll(c *fiber.Ctx) error {
 			return err
 		}
 
-		// 4. Catat pendaftarannya. Bila ternyata sudah terdaftar, error
-		//    di sini membatalkan juga penambahan kursi pada langkah 3.
+		// 4. Catat event ke outbox, memakai transaction yang sama.
+		//    Urutan di dalam transaction tidak mengubah hasil akhir: bila
+		//    langkah 5 gagal, catatan ini ikut dibatalkan bersama
+		//    penambahan kursi pada langkah 3.
+		if err := s.outbox.WithTx(tx).Insert(ctx, model.EventEnrollmentCreated, model.EnrollmentEvent{
+			UserID:     current.UserID,
+			CourseID:   enrolled.ID,
+			CourseCode: enrolled.Code,
+			CourseName: enrolled.Name,
+		}); err != nil {
+			return err
+		}
+
+		// 5. Catat pendaftarannya. Bila ternyata sudah terdaftar, error
+		//    di sini membatalkan seluruh langkah sebelumnya.
 		return repo.InsertEnrollment(ctx, courseID, current.UserID)
 	})
 	if err != nil {
@@ -169,8 +187,17 @@ func (s *CourseService) Drop(c *fiber.Ctx) error {
 		if err := repo.DeleteEnrollment(ctx, courseID, current.UserID); err != nil {
 			return err
 		}
-		_, err := repo.DecrementEnrolled(ctx, courseID)
-		return err
+		course, err := repo.DecrementEnrolled(ctx, courseID)
+		if err != nil {
+			return err
+		}
+		// Catat event ke outbox di dalam transaction yang sama.
+		return s.outbox.WithTx(tx).Insert(ctx, model.EventEnrollmentDropped, model.EnrollmentEvent{
+			UserID:     current.UserID,
+			CourseID:   course.ID,
+			CourseCode: course.Code,
+			CourseName: course.Name,
+		})
 	})
 	if err != nil {
 		return translateCourseError(err)
@@ -249,7 +276,20 @@ func (s *CourseService) Swap(c *fiber.Ctx) error {
 		if err != nil {
 			return err
 		}
-		return repo.InsertEnrollment(ctx, req.ToCourseID, current.UserID)
+		if err := repo.InsertEnrollment(ctx, req.ToCourseID, current.UserID); err != nil {
+			return err
+		}
+
+		// Satu event "pindah", bukan dua event "keluar" dan "masuk".
+		// Mahasiswa melakukan satu tindakan, maka ia menerima satu notifikasi.
+		return s.outbox.WithTx(tx).Insert(ctx, model.EventEnrollmentSwapped, model.EnrollmentEvent{
+			UserID:         current.UserID,
+			CourseID:       to.ID,
+			CourseCode:     to.Code,
+			CourseName:     to.Name,
+			FromCourseCode: from.Code,
+			FromCourseName: from.Name,
+		})
 	})
 	if err != nil {
 		return translateCourseError(err)
@@ -276,9 +316,32 @@ func (s *CourseService) UpdateQuota(c *fiber.Ctx) error {
 		return helper.Validation(errs)
 	}
 
-	// Satu pernyataan UPDATE saja, sehingga tidak perlu WithTx:
-	// setiap pernyataan tunggal di PostgreSQL sudah atomik dengan sendirinya.
-	updated, err := s.courses.UpdateQuota(ctx, id, req.Quota, req.Version)
+	// Mengubah kuota kelas dan mencatat event course.quota_changed ke outbox
+	// di dalam SATU transaction agar atomik (ACID): keduanya berhasil bersama
+	// atau keduanya dibatalkan bersama bila terjadi kegagalan/konflik versi.
+	var updated model.Course
+	err := s.tx.WithTx(ctx, func(tx repository.DBTX) error {
+		repo := s.courses.WithTx(tx)
+		outboxRepo := s.outbox.WithTx(tx)
+
+		oldCourse, err := repo.FindByID(ctx, id)
+		if err != nil {
+			return err
+		}
+
+		updated, err = repo.UpdateQuota(ctx, id, req.Quota, req.Version)
+		if err != nil {
+			return err
+		}
+
+		return outboxRepo.Insert(ctx, model.EventCourseQuotaChanged, model.QuotaChangedEvent{
+			CourseID:   updated.ID,
+			CourseCode: updated.Code,
+			CourseName: updated.Name,
+			NewQuota:   updated.Quota,
+			OldQuota:   oldCourse.Quota,
+		})
+	})
 	if err != nil {
 		return translateCourseError(err)
 	}

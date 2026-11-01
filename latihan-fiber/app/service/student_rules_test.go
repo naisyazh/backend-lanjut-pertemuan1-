@@ -72,13 +72,10 @@ func TestApplyPatchStudent(t *testing.T) {
 
 	// Test: ubah grade saja
 	newGrade := "B"
-	result, errs := ApplyPatchStudent(initial, model.PatchStudentRequest{
+	result := ApplyPatchStudent(initial, model.PatchStudentRequest{
 		Grade: &newGrade,
 	})
 
-	if len(errs) != 0 {
-		t.Fatalf("tidak seharusnya ada error: %v", errs)
-	}
 	if result.Grade != "B" {
 		t.Error("grade seharusnya berubah menjadi B")
 	}

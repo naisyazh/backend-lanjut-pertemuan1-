@@ -49,6 +49,9 @@ type CourseRepository interface {
 	// IsEnrolled dipakai layer lain — misalnya layanan ulasan di MongoDB — yang
 	// perlu tahu apakah seorang mahasiswa terdaftar di sebuah kelas.
 	IsEnrolled(ctx context.Context, courseID, userID int) (bool, error)
+
+	// FindParticipants mengambil seluruh user/mahasiswa yang terdaftar di kelas.
+	FindParticipants(ctx context.Context, courseID int) ([]model.User, error)
 }
 
 const courseColumns = `id, code, name, credits, quota, enrolled_count, version, created_at`
@@ -215,7 +218,7 @@ func (r *coursePostgresRepository) SumCredits(ctx context.Context, userID int) (
 func (r *coursePostgresRepository) IncrementEnrolled(ctx context.Context, courseID int) (model.Course, error) {
 	c, err := scanCourse(r.db.QueryRow(ctx,
 		`UPDATE courses SET enrolled_count = enrolled_count + 1
-		 WHERE id = $1 
+		 WHERE id = $1 AND enrolled_count < quota
 		 RETURNING `+courseColumns, courseID))
 	if err == nil {
 		return c, nil
@@ -235,7 +238,7 @@ func (r *coursePostgresRepository) IncrementEnrolled(ctx context.Context, course
 func (r *coursePostgresRepository) DecrementEnrolled(ctx context.Context, courseID int) (model.Course, error) {
 	c, err := scanCourse(r.db.QueryRow(ctx,
 		`UPDATE courses SET enrolled_count = enrolled_count - 1
-		 WHERE id = $1 AND enrolled_count < quota
+		 WHERE id = $1 AND enrolled_count > 0
 		 RETURNING `+courseColumns, courseID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -286,4 +289,27 @@ func (r *coursePostgresRepository) IsEnrolled(ctx context.Context, courseID, use
 		return false, fmt.Errorf("memeriksa pendaftaran: %w", err)
 	}
 	return exists, nil
+}
+
+func (r *coursePostgresRepository) FindParticipants(ctx context.Context, courseID int) ([]model.User, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT u.id, u.username, u.email, u.password, u.role, u.is_active, u.created_at
+		FROM users u
+		JOIN enrollments e ON e.user_id = u.id
+		WHERE e.course_id = $1
+		ORDER BY u.id ASC`, courseID)
+	if err != nil {
+		return nil, fmt.Errorf("mengambil peserta kelas: %w", err)
+	}
+	defer rows.Close()
+
+	var users []model.User
+	for rows.Next() {
+		var u model.User
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.Password, &u.Role, &u.IsActive, &u.CreatedAt); err != nil {
+			return nil, fmt.Errorf("membaca peserta kelas: %w", err)
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
 }

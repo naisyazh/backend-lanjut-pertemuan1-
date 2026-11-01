@@ -6,9 +6,33 @@ import (
 	"latihan-fiber/app/model"
 )
 
-// ValidateCreateStudent dan ValidateReplaceStudent dihapus.
-// Aturan validasi sudah dipindahkan ke tag validate pada struct request.
-// Yang tersisa hanyalah aturan yang tidak dapat dinyatakan sebagai tag.
+// ValidateCreateStudent validasi untuk POST student
+func ValidateCreateStudent(req model.CreateStudentRequest) map[string]string {
+	errs := map[string]string{}
+
+	if strings.TrimSpace(req.NIM) == "" {
+		errs["nim"] = "wajib diisi"
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		errs["name"] = "wajib diisi"
+	}
+
+	return errs
+}
+
+// ValidateReplaceStudent validasi untuk PUT student
+func ValidateReplaceStudent(req model.ReplaceStudentRequest) map[string]string {
+	errs := map[string]string{}
+
+	if strings.TrimSpace(req.NIM) == "" {
+		errs["nim"] = "wajib diisi pada PUT"
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		errs["name"] = "wajib diisi pada PUT"
+	}
+
+	return errs
+}
 
 // ApplyPatchStudent terapkan perubahan PATCH untuk student.
 // Pemeriksaan bentuk sudah dikerjakan tag sebelum fungsi ini dipanggil.
@@ -30,8 +54,7 @@ func ApplyPatchStudent(
 	return current
 }
 
-// IsEmptyPatchStudent memeriksa body PATCH yang tidak berisi field apa pun.
-// Tidak dapat ditulis sebagai tag karena menyangkut hubungan antar field.
+// IsEmptyPatchStudent cek apakah PATCH student kosong
 func IsEmptyPatchStudent(req model.PatchStudentRequest) bool {
 	return req.NIM == nil && req.Name == nil && req.Grade == nil && req.IsActive == nil
 }

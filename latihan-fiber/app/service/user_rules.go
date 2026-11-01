@@ -6,13 +6,20 @@ import (
 	"latihan-fiber/app/model"
 )
 
-// File ini berisi business rules MURNI: tidak menyentuh fiber.Ctx,
-// tidak menyentuh database, dan tidak tahu apa pun tentang HTTP.
-//
-// ValidateCreate, ValidateReplace, dan isValidEmail dihapus — aturan
-// bentuk data sudah dipindahkan ke tag validate pada struct request.
-// Yang tersisa di sini hanyalah aturan yang memang tidak dapat
-// dinyatakan sebagai tag.
+// ValidateCreate memeriksa field pembuatan user
+func ValidateCreate(req model.CreateUserRequest) map[string]string {
+	errs := map[string]string{}
+	if strings.TrimSpace(req.Username) == "" {
+		errs["username"] = "wajib diisi"
+	}
+	if strings.TrimSpace(req.Email) == "" || !strings.Contains(req.Email, "@") {
+		errs["email"] = "email tidak valid"
+	}
+	if len(req.Password) < 6 {
+		errs["password"] = "password minimal 6 karakter"
+	}
+	return errs
+}
 
 // ApplyPatch tidak lagi mengembalikan daftar error. Pemeriksaan bentuk
 // sudah selesai dikerjakan tag sebelum fungsi ini dipanggil, sehingga di
