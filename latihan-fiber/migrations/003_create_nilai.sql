@@ -9,11 +9,19 @@ CREATE TABLE IF NOT EXISTS nilai (
 CREATE INDEX IF NOT EXISTS nilai_student_id_idx ON nilai (student_id);
 CREATE INDEX IF NOT EXISTS nilai_mata_kuliah_idx ON nilai (LOWER(nama_mata_kuliah));
 
--- Sample data untuk testing
-INSERT INTO nilai (nama_mata_kuliah, nilai, student_id) VALUES
-('Praktikum A', 3.50, 1),
-('Database', 3.75, 1),
-('Algoritma', 3.25, 1),
-('Praktikum A', 2.80, 2),
-('Database', 3.90, 2),
-('Web Programming', 3.60, 2);
+-- Sample data untuk testing.
+-- DO block menangkap foreign key violation bila students belum ada
+-- (mis. database test kosong), sehingga migration tetap berhasil.
+DO $$
+BEGIN
+    INSERT INTO nilai (nama_mata_kuliah, nilai, student_id) VALUES
+    ('Praktikum A', 3.50, 1),
+    ('Database', 3.75, 1),
+    ('Algoritma', 3.25, 1),
+    ('Praktikum A', 2.80, 2),
+    ('Database', 3.90, 2),
+    ('Web Programming', 3.60, 2)
+    ON CONFLICT (id) DO NOTHING;
+EXCEPTION WHEN foreign_key_violation THEN
+    NULL;
+END $$;

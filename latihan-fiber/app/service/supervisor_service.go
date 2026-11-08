@@ -26,8 +26,15 @@ func NewSupervisorService(
 	return &SupervisorService{supervisors: supervisors, tx: tx}
 }
 
-// ---------- GET /supervisors ----------
-
+// List godoc
+//
+// @Summary Menampilkan daftar pembimbing tugas akhir
+// @Tags supervisors
+// @Produce json
+// @Success 200 {object} model.WebResponse{data=[]model.Supervisor}
+// @Failure 401 {object} model.ErrorResponse
+// @Security BearerAuth
+// @Router /supervisors [get]
 func (s *SupervisorService) List(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -39,8 +46,18 @@ func (s *SupervisorService) List(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "daftar pembimbing berhasil diambil", list)
 }
 
-// ---------- GET /supervisors/:id ----------
-
+// Get godoc
+//
+// @Summary Menampilkan detail pembimbing
+// @Tags supervisors
+// @Produce json
+// @Param id path int true "Supervisor ID"
+// @Success 200 {object} model.WebResponse{data=model.Supervisor}
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Security BearerAuth
+// @Router /supervisors/{id} [get]
 func (s *SupervisorService) Get(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -57,17 +74,23 @@ func (s *SupervisorService) Get(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "pembimbing ditemukan", sup)
 }
 
-// ---------- POST /supervisors/:id/assign ----------
+// Assign godoc
 //
-// Menetapkan mahasiswa ke pembimbing. Dijaga permission supervision:manage.
-//
-// Urutan dalam transaction:
-//  1. LockStudent (pessimistic) — mencegah satu mahasiswa ditetapkan
-//     ke dua pembimbing secara serentak dari dua request berbeda.
-//  2. IncrementSupervised (UPDATE bersyarat atomik) — mencegah banyak
-//     request berebut slot terakhir pembimbing.
-//  3. InsertSupervision — UNIQUE (student_id) sebagai jaring pengaman
-//     terakhir; bila gagal, rollback membatalkan langkah 2 juga.
+// @Summary Menetapkan pembimbing untuk mahasiswa (admin)
+// @Tags supervisors
+// @Accept json
+// @Produce json
+// @Param id path int true "Supervisor ID"
+// @Param body body model.AssignRequest true "Student ID"
+// @Success 201 {object} model.WebResponse{data=model.Supervisor}
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 409 {object} model.ErrorResponse
+// @Failure 422 {object} model.ErrorResponse
+// @Security BearerAuth
+// @Router /supervisors/{id}/assign [post]
 func (s *SupervisorService) Assign(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -114,12 +137,22 @@ func (s *SupervisorService) Assign(c *fiber.Ctx) error {
 		"/api/v1/supervisors/"+strconv.Itoa(supervisorID))
 }
 
-// ---------- POST /supervisions/switch ----------
+// Switch godoc
 //
-// Mengganti pembimbing mahasiswa secara atomik.
-//
-// Bila pembimbing baru penuh, mahasiswa TETAP dengan pembimbing lama.
-// Bebas deadlock karena kedua pembimbing selalu dikunci dalam urutan id menaik.
+// @Summary Mengganti pembimbing tugas akhir (admin)
+// @Tags supervisions
+// @Accept json
+// @Produce json
+// @Param body body model.SwitchRequest true "Student ID dan Supervisor Baru"
+// @Success 200 {object} model.WebResponse{data=model.Supervisor}
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 409 {object} model.ErrorResponse
+// @Failure 422 {object} model.ErrorResponse
+// @Security BearerAuth
+// @Router /supervisions/switch [post]
 func (s *SupervisorService) Switch(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -189,12 +222,23 @@ func (s *SupervisorService) Switch(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "berhasil mengganti pembimbing", joined)
 }
 
-// ---------- PATCH /supervisors/:id ----------
+// UpdateQuota godoc
 //
-// Mengubah kuota pembimbing dengan optimistic locking.
-//
-// Tidak perlu WithTx karena hanya satu pernyataan UPDATE — satu
-// pernyataan di PostgreSQL sudah atomik dengan sendirinya (A.3).
+// @Summary Mengubah kuota pembimbing dengan optimistic locking (admin)
+// @Tags supervisors
+// @Accept json
+// @Produce json
+// @Param id path int true "Supervisor ID"
+// @Param body body model.UpdateSupervisorQuotaRequest true "Kuota baru dan version"
+// @Success 200 {object} model.WebResponse{data=model.Supervisor}
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 409 {object} model.ErrorResponse
+// @Failure 422 {object} model.ErrorResponse
+// @Security BearerAuth
+// @Router /supervisors/{id} [patch]
 func (s *SupervisorService) UpdateQuota(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()

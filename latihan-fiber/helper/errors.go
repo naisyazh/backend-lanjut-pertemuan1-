@@ -1,7 +1,9 @@
 package helper
 
 import (
+	"context"
 	"fmt"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -11,16 +13,16 @@ import (
 // Code TIDAK boleh berubah — ia bagian dari kontrak API, karena client
 // menuliskan percabangan berdasarkan nilainya.
 const (
-	CodeValidation = "VALIDATION_ERROR"
-	CodeBadRequest = "BAD_REQUEST"
-	CodeUnauthorized = "UNAUTHORIZED"
-	CodeForbidden = "FORBIDDEN"
-	CodeNotFound = "NOT_FOUND"
-	CodeConflict = "CONFLICT"
+	CodeValidation       = "VALIDATION_ERROR"
+	CodeBadRequest       = "BAD_REQUEST"
+	CodeUnauthorized     = "UNAUTHORIZED"
+	CodeForbidden        = "FORBIDDEN"
+	CodeNotFound         = "NOT_FOUND"
+	CodeConflict         = "CONFLICT"
 	CodeUnsupportedMedia = "UNSUPPORTED_MEDIA_TYPE"
-	CodeNotAcceptable = "NOT_ACCEPTABLE"
-	CodeTooManyRequests = "TOO_MANY_REQUESTS"
-	CodeInternal = "INTERNAL_ERROR"
+	CodeNotAcceptable    = "NOT_ACCEPTABLE"
+	CodeTooManyRequests  = "TOO_MANY_REQUESTS"
+	CodeInternal         = "INTERNAL_ERROR"
 )
 
 // AppError adalah satu-satunya bentuk kegagalan yang dikenal aplikasi ini.
@@ -29,11 +31,11 @@ const (
 // menggambarkan apa yang salah; urusan menuliskannya sebagai response
 // diserahkan sepenuhnya kepada ErrorHandler terpusat.
 type AppError struct {
-	Status  int                `json:"-"` // status HTTP yang akan dikirim
-	Code    string             `json:"code"` // kode stabil untuk client
-	Message string             `json:"message"` // penjelasan untuk manusia
-	Fields  map[string]string  `json:"fields,omitempty"` // detail per-field, khusus kegagalan validasi
-	cause   error              `json:"-"` // error asli, untuk log — tidak pernah dikirim
+	Status  int               `json:"-"`                // status HTTP yang akan dikirim
+	Code    string            `json:"code"`             // kode stabil untuk client
+	Message string            `json:"message"`          // penjelasan untuk manusia
+	Fields  map[string]string `json:"fields,omitempty"` // detail per-field, khusus kegagalan validasi
+	cause   error             `json:"-"`                // error asli, untuk log — tidak pernah dikirim
 }
 
 func (e *AppError) Error() string {
@@ -137,4 +139,12 @@ func (ps *PermissionSet) Can(role, permission string) bool {
 		return false
 	}
 	return ps.perms[role][permission]
+}
+
+// HasPermission memenuhi interface PermissionChecker.
+func (ps *PermissionSet) HasPermission(_ context.Context, role, permission string) (bool, error) {
+	if ps == nil {
+		return false, nil
+	}
+	return ps.Can(role, permission), nil
 }

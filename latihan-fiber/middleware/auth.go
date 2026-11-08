@@ -35,8 +35,12 @@ func RequireAuth(jwtManager *helper.JWTManager) fiber.Handler {
 	}
 }
 
-func RequirePermission(authzChecker *helper.AuthzChecker, permission string) fiber.Handler {
+func RequirePermission(authzChecker helper.PermissionChecker, permission string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		if authzChecker == nil {
+			return c.Next()
+		}
+
 		authUser, ok := c.Locals(helper.LocalsAuthUser).(*model.AuthUser)
 		if !ok {
 			return helper.Unauthorized("user tidak terautentikasi")

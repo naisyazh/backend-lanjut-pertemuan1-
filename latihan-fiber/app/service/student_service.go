@@ -23,6 +23,20 @@ func NewStudentService(repo repository.StudentRepository, authzChecker *helper.A
 	}
 }
 
+// List godoc
+//
+// @Summary Menampilkan daftar student
+// @Tags students
+// @Produce json
+// @Produce text/csv
+// @Param limit query int false "Jumlah data per halaman" default(10)
+// @Param cursor query string false "Cursor untuk pagination"
+// @Param search query string false "Cari NIM atau nama"
+// @Success 200 {object} model.WebResponse{data=[]model.Student}
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Security BearerAuth
+// @Router /students [get]
 func (s *StudentService) List(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -70,6 +84,19 @@ func (s *StudentService) List(c *fiber.Ctx) error {
 	return helper.SuccessCursor(c, "daftar student berhasil diambil", rows, meta)
 }
 
+// Get godoc
+//
+// @Summary Menampilkan detail student berdasarkan ID
+// @Tags students
+// @Produce json
+// @Param id path int true "Student ID"
+// @Success 200 {object} model.WebResponse{data=model.Student}
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Security BearerAuth
+// @Router /students/{id} [get]
 func (s *StudentService) Get(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -101,6 +128,21 @@ func (s *StudentService) Get(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "student ditemukan", student)
 }
 
+// Create godoc
+//
+// @Summary Menambahkan student baru
+// @Tags students
+// @Accept json
+// @Produce json
+// @Param body body model.CreateStudentRequest true "Data student baru"
+// @Success 201 {object} model.WebResponse{data=model.Student}
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 409 {object} model.ErrorResponse "NIM sudah terdaftar"
+// @Failure 422 {object} model.ErrorResponse
+// @Security BearerAuth
+// @Router /students [post]
 func (s *StudentService) Create(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -138,6 +180,22 @@ func (s *StudentService) Create(c *fiber.Ctx) error {
 		"/api/v1/students/"+strconv.Itoa(baru.ID))
 }
 
+// Replace godoc
+//
+// @Summary Mengganti seluruh data student (PUT)
+// @Tags students
+// @Accept json
+// @Produce json
+// @Param id path int true "Student ID"
+// @Param body body model.ReplaceStudentRequest true "Data lengkap student"
+// @Success 200 {object} model.WebResponse{data=model.Student}
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 422 {object} model.ErrorResponse
+// @Security BearerAuth
+// @Router /students/{id} [put]
 func (s *StudentService) Replace(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -190,6 +248,22 @@ func (s *StudentService) Replace(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "student berhasil diganti seluruhnya", hasil)
 }
 
+// Patch godoc
+//
+// @Summary Memperbarui sebagian data student (PATCH)
+// @Tags students
+// @Accept json
+// @Produce json
+// @Param id path int true "Student ID"
+// @Param body body model.PatchStudentRequest true "Field yang ingin diubah"
+// @Success 200 {object} model.WebResponse{data=model.Student}
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 422 {object} model.ErrorResponse
+// @Security BearerAuth
+// @Router /students/{id} [patch]
 func (s *StudentService) Patch(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -241,6 +315,18 @@ func (s *StudentService) Patch(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "student berhasil diperbarui sebagian", hasil)
 }
 
+// Delete godoc
+//
+// @Summary Menghapus student berdasarkan ID
+// @Tags students
+// @Param id path int true "Student ID"
+// @Success 204 "Berhasil dihapus; tanpa body"
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Security BearerAuth
+// @Router /students/{id} [delete]
 func (s *StudentService) Delete(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()

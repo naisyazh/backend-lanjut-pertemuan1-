@@ -30,6 +30,15 @@ func NewCourseService(
 
 // ---------- GET /courses ----------
 
+// List godoc
+//
+// @Summary   Daftar seluruh kelas
+// @Tags      courses
+// @Produce   json
+// @Success   200  {object}  model.WebResponse{data=[]model.Course}
+// @Failure   401  {object}  model.ErrorResponse
+// @Security  BearerAuth
+// @Router    /courses [get]
 func (s *CourseService) List(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -43,6 +52,15 @@ func (s *CourseService) List(c *fiber.Ctx) error {
 
 // ---------- GET /courses/mine ----------
 
+// Mine godoc
+//
+// @Summary   KRS milik mahasiswa yang sedang login
+// @Tags      courses
+// @Produce   json
+// @Success   200  {object}  model.WebResponse{data=model.MyCourses}
+// @Failure   401  {object}  model.ErrorResponse
+// @Security  BearerAuth
+// @Router    /courses/mine [get]
 func (s *CourseService) Mine(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -70,6 +88,16 @@ func (s *CourseService) Mine(c *fiber.Ctx) error {
 
 // ---------- GET /courses/:id ----------
 
+// Get godoc
+//
+// @Summary   Detail satu kelas
+// @Tags      courses
+// @Produce   json
+// @Param     id   path      int  true  "ID kelas"
+// @Success   200  {object}  model.WebResponse{data=model.Course}
+// @Failure   404  {object}  model.ErrorResponse
+// @Security  BearerAuth
+// @Router    /courses/{id} [get]
 func (s *CourseService) Get(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -88,6 +116,19 @@ func (s *CourseService) Get(c *fiber.Ctx) error {
 
 // ---------- POST /courses/:id/enroll ----------
 
+// Enroll godoc
+//
+// @Summary      Mendaftar ke sebuah kelas
+// @Description  Kode error 409: COURSE_FULL, ALREADY_ENROLLED, CREDIT_LIMIT_EXCEEDED.
+// @Tags         courses
+// @Produce      json
+// @Param        id   path      int  true  "ID kelas"
+// @Success      201  {object}  model.WebResponse{data=model.Course}
+// @Failure      401  {object}  model.ErrorResponse
+// @Failure      404  {object}  model.ErrorResponse
+// @Failure      409  {object}  model.ErrorResponse
+// @Security     BearerAuth
+// @Router       /courses/{id}/enroll [post]
 func (s *CourseService) Enroll(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -164,6 +205,16 @@ func (s *CourseService) Enroll(c *fiber.Ctx) error {
 
 // ---------- DELETE /courses/:id/enroll ----------
 
+// Drop godoc
+//
+// @Summary   Keluar dari sebuah kelas
+// @Tags      courses
+// @Param     id   path  int  true  "ID kelas"
+// @Success   204  "Berhasil keluar"
+// @Failure   401  {object}  model.ErrorResponse
+// @Failure   409  {object}  model.ErrorResponse
+// @Security  BearerAuth
+// @Router    /courses/{id}/enroll [delete]
 func (s *CourseService) Drop(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -211,6 +262,18 @@ func (s *CourseService) Drop(c *fiber.Ctx) error {
 // keluar dari kelas lama dan masuk ke kelas baru harus terjadi
 // bersama-sama. Bila kelas baru ternyata penuh, mahasiswa harus TETAP
 // berada di kelas lamanya — bukan kehilangan keduanya.
+// Swap godoc
+//
+// @Summary      Pindah kelas
+// @Tags         courses
+// @Accept       json
+// @Produce      json
+// @Param        body  body      model.SwapRequest  true  "Kelas asal dan tujuan"
+// @Success      200   {object}  model.WebResponse{data=model.Course}
+// @Failure      401   {object}  model.ErrorResponse
+// @Failure      409   {object}  model.ErrorResponse
+// @Security     BearerAuth
+// @Router       /enrollments/swap [post]
 func (s *CourseService) Swap(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -299,6 +362,19 @@ func (s *CourseService) Swap(c *fiber.Ctx) error {
 
 // ---------- PATCH /courses/:id ----------
 // Dijaga middleware dengan permission course:manage.
+// UpdateQuota godoc
+//
+// @Summary      Mengubah kuota kelas (admin)
+// @Tags         courses
+// @Accept       json
+// @Produce      json
+// @Param        id    path      int                       true  "ID kelas"
+// @Param        body  body      model.UpdateQuotaRequest  true  "Kuota baru dan version"
+// @Success      200   {object}  model.WebResponse{data=model.Course}
+// @Failure      403   {object}  model.ErrorResponse
+// @Failure      409   {object}  model.ErrorResponse
+// @Security     BearerAuth
+// @Router       /courses/{id} [patch]
 func (s *CourseService) UpdateQuota(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()

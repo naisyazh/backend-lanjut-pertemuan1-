@@ -49,6 +49,14 @@ func (m *JWTManager) GenerateAccess(u model.User) (string, error) {
 	return token.SignedString(m.secret)
 }
 
+func (m *JWTManager) GenerateAccessToken(u model.AuthUser) (string, error) {
+	return m.GenerateAccess(model.User{
+		ID:       u.UserID,
+		Username: u.Username,
+		Role:     u.Role,
+	})
+}
+
 func (m *JWTManager) Parse(tokenString string) (model.AuthUser, error) {
 	claims := &accessClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims,

@@ -8,6 +8,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// PermissionChecker memeriksa permission berbasis role.
+type PermissionChecker interface {
+	HasPermission(ctx context.Context, role, permission string) (bool, error)
+}
+
 // AuthzChecker memeriksa authorization permissions
 type AuthzChecker struct {
 	pool *pgxpool.Pool

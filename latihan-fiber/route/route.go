@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	swagger "github.com/gofiber/swagger"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
@@ -18,7 +19,7 @@ type Dependencies struct {
 	Pool                *pgxpool.Pool
 	Mongo               *mongo.Client
 	JWT                 *helper.JWTManager
-	Permissions         *helper.AuthzChecker
+	Permissions         helper.PermissionChecker
 	UserService         *service.UserService
 	StudentService      *service.StudentService
 	NilaiService        *service.NilaiService
@@ -28,9 +29,15 @@ type Dependencies struct {
 	ReviewService       *service.ReviewService
 	PortfolioService    *service.PortfolioService
 	NotificationService *service.NotificationService
+	EnableSwagger       bool
 }
 
 func Register(app *fiber.App, deps Dependencies) {
+	if deps.EnableSwagger {
+		// Swagger UI: http://localhost:3000/swagger/index.html
+		app.Get("/swagger/*", swagger.HandlerDefault)
+	}
+
 	perms := deps.Permissions
 
 	api := app.Group("/api/v1")
